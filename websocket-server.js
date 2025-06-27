@@ -1,9 +1,13 @@
 const WebSocket = require('ws');
+const http = require('http');
 
-const wss = new WebSocket.Server({ port: 3000 });
+const port = process.env.PORT || 3000;
+const server = http.createServer();
+const wss = new WebSocket.Server({ server });
+
 const clients = new Map();
 
-console.log('📡 Servidor WebSocket iniciado en ws://localhost:3000');
+console.log(`📡 Servidor WebSocket iniciado en puerto dinámico`);
 
 wss.on('connection', (ws) => {
     console.log('🟢 Cliente conectado');
@@ -13,7 +17,6 @@ wss.on('connection', (ws) => {
             const data = JSON.parse(message);
             console.log('📩 Mensaje recibido:', data);
 
-            // Unirse a la sala
             if (data.type === 'join') {
                 clients.set(ws, {
                     name: data.name,
@@ -25,7 +28,6 @@ wss.on('connection', (ws) => {
                 broadcastParticipants();
             }
 
-            // Chat entre usuarios
             if (data.type === 'chat') {
                 const senderInfo = clients.get(ws);
                 const senderName = senderInfo?.name || data.from;
@@ -44,7 +46,6 @@ wss.on('connection', (ws) => {
                 }
             }
 
-            // Expulsión por nombre
             if (data.type === 'expulsar') {
                 for (const [client, info] of clients.entries()) {
                     if (info.name === data.target) {
@@ -55,7 +56,6 @@ wss.on('connection', (ws) => {
                 }
             }
 
-            // Silenciar usuario
             if (data.type === 'silenciar') {
                 for (const [client, info] of clients.entries()) {
                     if (info.name === data.target) {
@@ -66,7 +66,6 @@ wss.on('connection', (ws) => {
                 }
             }
 
-            // Señalización WebRTC
             if (['offer', 'answer', 'candidate'].includes(data.type)) {
                 const senderInfo = clients.get(ws);
                 const senderName = senderInfo?.name || data.from;
@@ -98,7 +97,6 @@ wss.on('connection', (ws) => {
     });
 });
 
-// Difundir lista de participantes
 function broadcastParticipants() {
     const participants = Array.from(clients.values()).map(c => ({
         name: c.name,
@@ -118,3 +116,8 @@ function broadcastParticipants() {
         }
     }
 }
+
+server.listen(port, () => {
+    console.log(`🚀 Servidor WebSocket activo en el puerto ${port}`);
+});
+
